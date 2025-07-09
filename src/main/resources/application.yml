@@ -27,3 +27,11 @@ eureka:
 
 server:
   port: 0
+
+resilience4j:
+  circuit-breaker:
+    instances:
+      atualizaPedido:
+        slidingWindowSize: 3
+        minimumNumberOfCalls: 2
+        waitDurationInOpenState: 50s

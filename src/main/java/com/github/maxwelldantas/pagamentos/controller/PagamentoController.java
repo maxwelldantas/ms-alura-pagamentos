@@ -2,6 +2,7 @@ package com.github.maxwelldantas.pagamentos.controller;
 
 import com.github.maxwelldantas.pagamentos.dto.PagamentoDTO;
 import com.github.maxwelldantas.pagamentos.service.PagamentoService;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
@@ -64,9 +65,16 @@ public class PagamentoController {
 	}
 
 	@PatchMapping("/{id}/confirmar")
+	@CircuitBreaker(name = "atualizaPedido", fallbackMethod = "pagamentoAutorizadoComIntegracaoPendente")
 	public ResponseEntity<PagamentoDTO> confirmarPagamento(@PathVariable @NotNull Long id) {
 		pagamentoService.confirmarPagamento(id);
 
 		return ResponseEntity.noContent().build();
+	}
+
+	public ResponseEntity<PagamentoDTO> pagamentoAutorizadoComIntegracaoPendente(Long id) {
+		pagamentoService.alteraStatus(id);
+
+		return ResponseEntity.ok().build();
 	}
 }

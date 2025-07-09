@@ -24,14 +24,21 @@ public class PagamentoService {
 	public Page<PagamentoDTO> obterTodos(Pageable pageable) {
 		return pagamentoRepository
 				.findAll(pageable)
-				.map(pagamento -> modelMapper.map(pagamento, PagamentoDTO.class));
+				.map(pagamento -> {
+					var dto = modelMapper.map(pagamento, PagamentoDTO.class);
+					dto.setItens(pedidoClient.obterItensDoPedido(pagamento.getPedidoId()).getItens());
+					return dto;
+				});
 	}
 
 	public PagamentoDTO obterPorId(Long id) {
 		var pagamento = pagamentoRepository.findById(id)
 				.orElseThrow(EntityNotFoundException::new);
 
-		return modelMapper.map(pagamento, PagamentoDTO.class);
+		var dto = modelMapper.map(pagamento, PagamentoDTO.class);
+		dto.setItens(pedidoClient.obterItensDoPedido(pagamento.getPedidoId()).getItens());
+
+		return dto;
 	}
 
 	@Transactional
@@ -64,11 +71,29 @@ public class PagamentoService {
 
 	@Transactional
 	public void confirmarPagamento(Long id) {
+		confirmarPagamentoStatus(id, false);
+	}
+
+	@Transactional
+	public void alteraStatus(Long id) {
+		confirmarPagamentoStatus(id, true);
+	}
+
+	private void confirmarPagamentoStatus(Long id, boolean isFallback) {
 		var pagamento = pagamentoRepository.findById(id)
 				.orElseThrow(EntityNotFoundException::new);
 
-		pagamento.setStatus(Status.CONFIRMADO);
+		if (!isFallback) {
+			pagamento.setStatus(Status.CONFIRMADO);
+		}
+		if (isFallback) {
+			pagamento.setStatus(Status.CONFIRMADO_SEM_INTEGRACAO);
+		}
+
 		pagamentoRepository.save(pagamento);
-		pedidoClient.atualizarPagamento(pagamento.getPedidoId());
+
+		if (!isFallback) {
+			pedidoClient.atualizarPagamento(pagamento.getPedidoId());
+		}
 	}
 }
