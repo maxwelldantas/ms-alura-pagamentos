@@ -1,6 +1,7 @@
 package com.github.maxwelldantas.pagamentos.service;
 
 import com.github.maxwelldantas.pagamentos.dto.PagamentoDTO;
+import com.github.maxwelldantas.pagamentos.http.PedidoClient;
 import com.github.maxwelldantas.pagamentos.model.Pagamento;
 import com.github.maxwelldantas.pagamentos.model.Status;
 import com.github.maxwelldantas.pagamentos.repository.PagamentoRepository;
@@ -18,6 +19,7 @@ public class PagamentoService {
 
 	private final PagamentoRepository pagamentoRepository;
 	private final ModelMapper modelMapper;
+	private final PedidoClient pedidoClient;
 
 	public Page<PagamentoDTO> obterTodos(Pageable pageable) {
 		return pagamentoRepository
@@ -58,5 +60,15 @@ public class PagamentoService {
 	@Transactional
 	public void excluirPagamento(Long id) {
 		pagamentoRepository.deleteById(id);
+	}
+
+	@Transactional
+	public void confirmarPagamento(Long id) {
+		var pagamento = pagamentoRepository.findById(id)
+				.orElseThrow(EntityNotFoundException::new);
+
+		pagamento.setStatus(Status.CONFIRMADO);
+		pagamentoRepository.save(pagamento);
+		pedidoClient.atualizarPagamento(pagamento.getPedidoId());
 	}
 }
